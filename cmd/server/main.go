@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
 	"uptime-monitor/internal/api"
 	"uptime-monitor/internal/auth"
 	"uptime-monitor/internal/config"
@@ -20,7 +21,6 @@ import (
 )
 
 func main() {
-
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
@@ -60,6 +60,10 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info("connected to database")
+
+	conn.SetMaxOpenConns(10)
+	conn.SetMaxIdleConns(5)
+	conn.SetConnMaxIdleTime(300 * time.Second)
 
 	db := storage.NewPostgresStore(conn)
 	repo := api.NewApplication(db)

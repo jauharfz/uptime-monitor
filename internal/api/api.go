@@ -7,11 +7,11 @@ import (
 const maxBytes = 1048576
 
 type Application struct {
-	DB storage.PostgresStore
+	DB *storage.PostgresStore
 }
 
 func NewApplication(db *storage.PostgresStore) *Application {
 	return &Application{
-		DB: *db,
+		DB: db,
 	}
 }

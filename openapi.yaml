@@ -11,7 +11,7 @@ info:
     (`data` omitted when empty). Error responses are plain text.
   version: 1.0.0
 servers:
-  - url: https://uptime-monitor-api.duckdns.org
+  - url: https://uptime-monitor-api-whxg.onrender.com
     description: Live demo
   - url: http://localhost:8080
     description: Local development
@@ -160,7 +160,7 @@ paths:
           $ref: "#/components/responses/NotFound"
     patch:
       tags: [monitors]
-      summary: Update url, check_interval, or webhook_url
+      summary: Update url, check_interval, webhook_url, or is_public
       requestBody:
         required: true
         content:
@@ -250,6 +250,36 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/public/monitors/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/MonitorId"
+    get:
+      tags: [monitors]
+      summary: Get status and history for a public monitor
+      description: |
+        Returns the latest checks (up to 50) and aggregate statistics for a
+        monitor without requiring authentication. Returns 404 if the monitor
+        does not exist or is not marked public (`is_public = false`).
+      security: []
+      responses:
+        "200":
+          description: Public monitor checks history and aggregate stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/PublicMonitorStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 security:
   - bearerAuth: []
 
@@ -283,7 +313,7 @@ components:
           schema:
             type: string
     NotFound:
-      description: Monitor does not exist or is not owned by the caller
+      description: Monitor does not exist, is not owned by the caller, or is not public
       content:
         text/plain:
           schema:
@@ -349,6 +379,10 @@ components:
         webhook_url:
           type: string
           description: Optional. POSTed to when the monitor flips between up and down (e.g. a Discord webhook).
+        is_public:
+          type: boolean
+          description: Optional. Set to true to make checks and stats publicly accessible without authentication.
+          example: true
       required: [url, check_interval]
 
     Monitor:
@@ -383,6 +417,9 @@ components:
         last_status_code:
           type: integer
           description: Status code recorded by the most recent check. Omitted when zero.
+        is_public:
+          type: boolean
+          description: Whether the monitor status is publicly viewable.
 
     Check:
       type: object
@@ -415,3 +452,13 @@ components:
         uptime_percentage:
           type: number
           example: 99.5
+
+    PublicMonitorStatus:
+      type: object
+      properties:
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Check"
+        monitor_stats:
+          $ref: "#/components/schemas/MonitorStats"

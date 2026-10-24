@@ -1,0 +1,43 @@
+# @kulala-vscode-restclient-compat
+### Health Test
+GET {{baseUrl}}/health
+
+### Register User
+POST {{baseUrl}}/api/v1/users/register
+Content-Type: application/json
+
+{
+	"username":"{{username}}",
+	"password":"{{password}}",
+	"email":"{{email}}"
+}
+
+### Login User
+# @name login
+POST {{baseUrl}}/api/v1/users/login
+Content-Type: application/json
+
+{
+	"email":"{{email}}",
+	"password":"{{password}}"
+}
+
+
+### Show Public Monitor
+GET {{baseUrl}}/api/v1/public/monitors/1/status
+
+### Create Monitor
+POST {{baseUrl}}/api/v1/monitors
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+	"url":"https://battleship-clone.xyz/api/v1/health",
+	"check_interval":60,
+	"webhook_url":"https://discord.com/api/webhooks/1525399984948777131/_1Q5PX0wb6O9BIXSONyqLG02f_rogfrXlZMp6TNOXZuJjblN0w2Dk_HbG0xUg7lXQIx1",
+	"is_public":true
+}
+
+
+
+

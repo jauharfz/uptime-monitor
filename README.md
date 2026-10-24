@@ -101,6 +101,7 @@ These are choices I made deliberately while building it:
 | last_checked_at  | timestamp    | nullable; indexed                        |
 | webhook_url      | varchar(255) | optional alert target; empty = no alerts |
 | last_status_code | int          | status from the previous check, used to detect up/down transitions |
+| is_public        | boolean      | optional toggle to expose status publicly without auth |
 | created_at       | timestamp    |                                          |
 | updated_at       | timestamp    |                                          |
 
@@ -120,23 +121,24 @@ These are choices I made deliberately while building it:
 All success responses are JSON with the shape `{ "status", "message", "data" }`
 (`data` is omitted when empty). The full contract lives in
 [openapi.yaml](openapi.yaml) — browse it rendered at
-[/docs](https://uptime-monitor-api.duckdns.org/docs) on the live instance, or
+[/docs](https://uptime-monitor-api-whxg.onrender.com/docs) on the live instance, or
 import it into Postman or Insomnia to try the endpoints.
 
-| Method | Path                           | Auth   | Description                          |
-|--------|--------------------------------|--------|--------------------------------------|
-| GET    | /health                        | public | liveness check                       |
-| GET    | /docs                          | public | interactive API docs (Scalar)        |
-| GET    | /openapi.yaml                  | public | the OpenAPI spec itself              |
-| POST   | /api/v1/users/register         | public | create an account                    |
-| POST   | /api/v1/users/login            | public | log in, returns a JWT                |
-| POST   | /api/v1/monitors               | bearer | create a monitor                     |
-| GET    | /api/v1/monitors               | bearer | list the caller's monitors           |
-| GET    | /api/v1/monitors/{id}          | bearer | get one monitor                      |
-| PATCH  | /api/v1/monitors/{id}          | bearer | update url / check_interval / webhook_url |
-| DELETE | /api/v1/monitors/{id}          | bearer | delete a monitor                     |
-| GET    | /api/v1/monitors/{id}/checks   | bearer | last 50 checks, newest first         |
-| GET    | /api/v1/monitors/{id}/stats    | bearer | total checks, avg response, uptime % |
+| Method | Path                                | Auth   | Description                                           |
+|--------|-------------------------------------|--------|-------------------------------------------------------|
+| GET    | /health                             | public | liveness check                                        |
+| GET    | /docs                               | public | interactive API docs (Scalar)                         |
+| GET    | /openapi.yaml                       | public | the OpenAPI spec itself                               |
+| POST   | /api/v1/users/register              | public | create an account                                     |
+| POST   | /api/v1/users/login                 | public | log in, returns a JWT                                 |
+| POST   | /api/v1/monitors                    | bearer | create a monitor                                      |
+| GET    | /api/v1/monitors                    | bearer | list the caller's monitors                            |
+| GET    | /api/v1/monitors/{id}               | bearer | get one monitor                                       |
+| PATCH  | /api/v1/monitors/{id}               | bearer | update url / check_interval / webhook_url / is_public |
+| DELETE | /api/v1/monitors/{id}               | bearer | delete a monitor                                      |
+| GET    | /api/v1/monitors/{id}/checks        | bearer | last 50 checks, newest first                          |
+| GET    | /api/v1/monitors/{id}/stats         | bearer | total checks, avg response, uptime %                  |
+| GET    | /api/v1/public/monitors/{id}/status | public | checks and stats for a public monitor                 |
 
 Protected routes expect an `Authorization: Bearer <token>` header.
 
@@ -227,14 +229,10 @@ for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 
 ## Deployment
 
-A live instance runs on an Azure Ubuntu VM. Docker Compose builds the API and
-PostgreSQL on the host, Caddy sits in front as a reverse proxy and terminates TLS
-with an automatically renewed Let's Encrypt certificate, and the hostname is a
-DuckDNS subdomain. The containers' published ports are bound to `localhost`, so
-only Caddy reaches them from outside.
+A live instance runs on Render with PostgreSQL.
 
-Live: [`/health`](https://uptime-monitor-api.duckdns.org/health) ·
-[`/docs`](https://uptime-monitor-api.duckdns.org/docs)
+Live: [`/health`](https://uptime-monitor-api-whxg.onrender.com/health) ·
+[`/docs`](https://uptime-monitor-api-whxg.onrender.com/docs)
 
 ## Limitations and next steps
 

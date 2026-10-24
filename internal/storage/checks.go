@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"time"
+
 	"uptime-monitor/internal/models"
 )
 
@@ -64,7 +65,7 @@ func (s *PostgresStore) GetMonitorsDueForCheck() ([]models.Monitor, error) {
 
 	for rows.Next() {
 		var monitor models.Monitor
-		err = rows.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode)
+		err = rows.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode, &monitor.IsPublic)
 		if err != nil {
 			return nil, err
 		}
@@ -94,9 +95,9 @@ func (s *PostgresStore) GetMonitorStatsById(monitorID int) (models.MonitorStats,
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	query := `SELECT COUNT(id) AS total_checks,
+	query := `SELECT COUNT(*) AS total_checks,
 		COALESCE(AVG(response_time),0) AS avg_response_time,
-		COALESCE ( COUNT(id) FILTER(WHERE status_code >= 200 AND status_code < 300)::FLOAT/NULLIF(COUNT(id),0)*100,0) as uptime_percentage
+		COALESCE ( COUNT(*) FILTER(WHERE status_code >= 200 AND status_code < 300)::FLOAT/NULLIF(COUNT(id),0)*100,0) as uptime_percentage
 		FROM checks WHERE monitor_id = $1`
 
 	var stats models.MonitorStats
@@ -130,7 +131,6 @@ func (s *PostgresStore) GetCheckAndMonitorById(id int) (models.CheckWithMonitor,
 		&checkWithMonitor.ResponseTime,
 		&checkWithMonitor.CheckedAt,
 	)
-
 	if err != nil {
 		return checkWithMonitor, err
 	}

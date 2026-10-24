@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
 	"uptime-monitor/internal/models"
 )
 
@@ -21,7 +22,7 @@ func (s *PostgresStore) GetAllMonitorByUserID(userID int) ([]models.Monitor, err
 	defer rows.Close()
 	for rows.Next() {
 		var monitor models.Monitor
-		err = rows.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode)
+		err = rows.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode, &monitor.IsPublic)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +41,7 @@ func (s *PostgresStore) GetMonitorByID(id, userID int) (models.Monitor, error) {
 	query := `SELECT * FROM monitors WHERE id = $1 and user_id = $2`
 	var monitor models.Monitor
 	row := s.DB.QueryRowContext(ctx, query, id, userID)
-	err := row.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode)
+	err := row.Scan(&monitor.ID, &monitor.UserID, &monitor.Url, &monitor.CheckInterval, &monitor.CreatedAt, &monitor.UpdatedAt, &monitor.LastCheckedAt, &monitor.WebhookUrl, &monitor.LastStatusCode, &monitor.IsPublic)
 	if err != nil {
 		return monitor, err
 	}
@@ -51,20 +52,20 @@ func (s *PostgresStore) InsertMonitor(monitor models.Monitor) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	stmt := `INSERT INTO monitors(user_id,url,check_interval,created_at,updated_at,webhook_url) VALUES($1,$2,$3,$4,$5,$6)`
-	_, err := s.DB.ExecContext(ctx, stmt, monitor.UserID, monitor.Url, monitor.CheckInterval, time.Now(), time.Now(), &monitor.WebhookUrl)
+	stmt := `INSERT INTO monitors(user_id,url,check_interval,created_at,updated_at,webhook_url,is_public) VALUES($1,$2,$3,$4,$5,$6,$7)`
+	_, err := s.DB.ExecContext(ctx, stmt, monitor.UserID, monitor.Url, monitor.CheckInterval, time.Now(), time.Now(), &monitor.WebhookUrl, &monitor.IsPublic)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *PostgresStore) UpdateMonitorByID(id, userID, checkInterval int, url, webhookUrl string) error {
+func (s *PostgresStore) UpdateMonitorByID(id, userID, checkInterval int, url, webhookUrl string, isPublic bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	stmt := `UPDATE monitors SET url = $1, check_interval = $2, webhook_url = $3,updated_at = $4 WHERE id = $5 and user_id = $6`
-	_, err := s.DB.ExecContext(ctx, stmt, url, checkInterval, webhookUrl, time.Now(), id, userID)
+	stmt := `UPDATE monitors SET url = $1, check_interval = $2, webhook_url = $3,updated_at = $4, is_public = $5 WHERE id = $6 and user_id = $7`
+	_, err := s.DB.ExecContext(ctx, stmt, url, checkInterval, webhookUrl, time.Now(), isPublic, id, userID)
 	if err != nil {
 		return err
 	}
@@ -91,4 +92,17 @@ func (s *PostgresStore) DeleteMonitorByID(id, userID int) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (s *PostgresStore) IsMonitorPublic(id int) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var exist bool
+	query := `SELECT EXISTS (SELECT 1 FROM monitors WHERE id = $1 and is_public)`
+	err := s.DB.QueryRowContext(ctx, query, id).Scan(&exist)
+	if err != nil {
+		return false, err
+	}
+	return exist, nil
 }

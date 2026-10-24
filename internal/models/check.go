@@ -22,3 +22,14 @@ type CheckWithMonitor struct {
 	ResponseTime  int       `json:"response_time"`
 	CheckedAt     time.Time `json:"checked_at"`
 }
+
+type CheckWithStats struct {
+	ID               int       `json:"id"`
+	MonitorID        int       `json:"monitor_id"`
+	StatusCode       int       `json:"status_code"`
+	ResponseTime     int       `json:"response_time"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	AvgResponseTime  float64   `json:"avg_response_time"`
+	UptimePercentage float64   `json:"uptime_percentage"`
+}

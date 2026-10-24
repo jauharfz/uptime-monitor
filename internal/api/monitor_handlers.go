@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
 	"uptime-monitor/internal/models"
 )
 
@@ -90,7 +91,6 @@ func (app *Application) ListMonitors(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to encoding json response to user", "error", err)
 		return
 	}
-
 }
 
 func (app *Application) ShowMonitor(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +182,7 @@ func (app *Application) UpdateMonitor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.DB.UpdateMonitorByID(monitor.ID, monitor.UserID, monitor.CheckInterval, monitor.Url, monitor.WebhookUrl)
+	err = app.DB.UpdateMonitorByID(monitor.ID, monitor.UserID, monitor.CheckInterval, monitor.Url, monitor.WebhookUrl, monitor.IsPublic)
 	if err != nil {
 		slog.Error("user cannot update monitor by id from database", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -235,6 +235,60 @@ func (app *Application) DeleteMonitor(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		slog.Error("failed to encoding json response to user", "error", err)
+		return
+	}
+}
+
+// TODO: just query the []check+precentage
+func (app *Application) ShowPublicMonitor(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		slog.Warn("failed parsing path value to int")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	exist, err := app.DB.IsMonitorPublic(id)
+	if err != nil {
+		slog.Error("failed to check is monitor public", "id", id, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if !exist {
+		slog.Warn("the monitor to be checked either doesn't exist or isn't public", "id", id)
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	checks, err := app.DB.GetChecksByMonitorID(id)
+	if err != nil {
+		slog.Error("failed to get checks by monitor id", "id", id, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	monitorStats, err := app.DB.GetMonitorStatsById(id)
+	if err != nil {
+		slog.Error("failed to get monitor stats by id", "id", id, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	response := jsonResponse{
+		Status:  "success",
+		Message: "get checks and monitor stats",
+		Data: map[string]any{
+			"checks":        checks,
+			"monitor_stats": monitorStats,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(&response)
+	if err != nil {
+		slog.Error("failed to encode json response", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 }

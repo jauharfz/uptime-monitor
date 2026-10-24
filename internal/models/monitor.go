@@ -15,6 +15,7 @@ type Monitor struct {
 	LastCheckedAt  sql.NullTime `json:"last_checked_at"`
 	WebhookUrl     string       `json:"webhook_url,omitempty"`
 	LastStatusCode int          `json:"last_status_code,omitempty"`
+	IsPublic       bool         `json:"is_public"`
 }
 
 type MonitorStats struct {

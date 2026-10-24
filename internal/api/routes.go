@@ -3,14 +3,16 @@ package api
 import "net/http"
 
 func Routes(app *Application) http.Handler {
-
-	// Public Routes
+	// Normal Routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", app.HealthTest)
 	mux.HandleFunc("GET /openapi.yaml", app.GetYamlSpec)
 	mux.HandleFunc("GET /docs", app.ShowSwaggerUI)
 	mux.HandleFunc("POST /api/v1/users/register", app.PostUserRegister)
 	mux.HandleFunc("POST /api/v1/users/login", app.PostUserLogin)
+
+	// Public Routes
+	mux.Handle("GET /api/v1/public/monitors/{id}/status", app.Cors(http.HandlerFunc(app.ShowPublicMonitor)))
 
 	// Protected Routes
 	protectedMux := http.NewServeMux()

@@ -1,15 +1,21 @@
 # @kulala-vscode-restclient-compat
-### Health Test
+### Health Check
 GET {{baseUrl}}/health
+
+### Interactive Docs (HTML)
+GET {{baseUrl}}/docs
+
+### OpenAPI YAML Spec
+GET {{baseUrl}}/openapi.yaml
 
 ### Register User
 POST {{baseUrl}}/api/v1/users/register
 Content-Type: application/json
 
 {
-	"username":"{{username}}",
-	"password":"{{password}}",
-	"email":"{{email}}"
+	"username": "{{username}}",
+	"password": "{{password}}",
+	"email": "{{email}}"
 }
 
 ### Login User
@@ -18,13 +24,16 @@ POST {{baseUrl}}/api/v1/users/login
 Content-Type: application/json
 
 {
-	"email":"{{email}}",
-	"password":"{{password}}"
+	"email": "{{email}}",
+	"password": "{{password}}"
 }
 
-
-### Show Public Monitor
+### Show Public Monitor (Unauthenticated)
 GET {{baseUrl}}/api/v1/public/monitors/1/status
+
+### List Monitors
+GET {{baseUrl}}/api/v1/monitors
+Authorization: Bearer {{login.response.body.data.token}}
 
 ### Create Monitor
 POST {{baseUrl}}/api/v1/monitors
@@ -32,12 +41,36 @@ Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
 {
-	"url":"https://battleship-clone.xyz/api/v1/health",
-	"check_interval":60,
-	"webhook_url":"https://discord.com/api/webhooks/1525399984948777131/_1Q5PX0wb6O9BIXSONyqLG02f_rogfrXlZMp6TNOXZuJjblN0w2Dk_HbG0xUg7lXQIx1",
-	"is_public":true
+	"url": "{{monitorUrl}}",
+	"check_interval": 60,
+	"webhook_url": "{{webhookUrl}}",
+	"is_public": true
 }
 
+### Get One Monitor
+GET {{baseUrl}}/api/v1/monitors/1
+Authorization: Bearer {{login.response.body.data.token}}
 
+### Update Monitor
+PATCH {{baseUrl}}/api/v1/monitors/1
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
 
+{
+	"url": "{{monitorUrl}}",
+	"check_interval": 30,
+	"webhook_url": "{{webhookUrl}}",
+	"is_public": false
+}
 
+### Get Monitor Checks History (Last 50)
+GET {{baseUrl}}/api/v1/monitors/1/checks
+Authorization: Bearer {{login.response.body.data.token}}
+
+### Get Monitor Stats
+GET {{baseUrl}}/api/v1/monitors/1/stats
+Authorization: Bearer {{login.response.body.data.token}}
+
+### Delete Monitor
+DELETE {{baseUrl}}/api/v1/monitors/1
+Authorization: Bearer {{login.response.body.data.token}}

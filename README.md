@@ -6,15 +6,15 @@ schedule by a background worker. Each check records the HTTP status code and
 response time, the API exposes per-monitor history and uptime statistics, and an
 optional webhook (e.g. Discord) fires when a site goes down or recovers.
 
-I built this as my first backend project written from scratch — no starter
-template and no web framework. The goal was to understand how the parts of a REST
+I built this as my first backend project written from scratch without any starter
+template or web framework. The goal was to understand how the parts of a REST
 API actually fit together, so I stayed on Go's standard library and only reached
 for a third-party package where writing it myself would have been a mistake (the
 PostgreSQL driver and password hashing).
 
 ## Tech stack
 
-- Go — standard library for HTTP, routing, DB access, logging, and the JWT
+- Go: standard library for HTTP, routing, DB access, logging, and JWT
   signing (`net/http`, `database/sql`, `context`, `log/slog`, `crypto/hmac`)
 - PostgreSQL
 - `pgx` as the database driver, used through `database/sql`
@@ -25,14 +25,14 @@ PostgreSQL driver and password hashing).
 
 Two things run inside one process:
 
-1. **REST API** — registration, login, and CRUD for monitors, plus history and
+1. **REST API**: registration, login, and CRUD for monitors, plus history and
    stats endpoints. Every route that touches user data sits behind JWT auth
    middleware.
-2. **Background worker** — a goroutine driven by a `time.Ticker`. On each tick it
+2. **Background worker**: a goroutine driven by a `time.Ticker`. On each tick it
    asks the database which monitors are due for a check, pings them concurrently,
    and writes the result (status code + response time) into the `checks` table.
    When a monitor flips between up and down, the worker POSTs a notification to
-   that monitor's `webhook_url` if one is set — pointing it at a Discord webhook
+   that monitor's `webhook_url` if one is set; pointing it at a Discord webhook
    gives you down/up alerts in a channel.
 
 Request flow for a protected endpoint:
@@ -52,10 +52,10 @@ These are choices I made deliberately while building it:
 - **Standard-library routing.** Go 1.22's `http.ServeMux` matches on method and
   path patterns (`GET /monitors/{id}`, read with `r.PathValue("id")`), so a router
   library wasn't necessary for this scope.
-- **Hand-written JWT.** I implemented HS256 myself — base64url header and payload,
-  signed with HMAC-SHA256, verified with a constant-time compare (`hmac.Equal`) —
-  to learn how a token is actually structured and checked. For real production use
-  I would switch to a vetted library such as `golang-jwt`.
+- **Hand-written JWT.** I implemented HS256 myself (base64url header and payload,
+  signed with HMAC-SHA256, verified with `hmac.Equal`) to learn how a token
+  is actually structured and checked. For real production use I would switch to
+  a vetted library such as `golang-jwt`.
 - **Repository pattern.** All SQL lives in the `storage` package behind methods
   like `InsertMonitor` and `GetMonitorByID`; handlers never contain SQL.
 - **Context timeouts.** Every database call runs under a 3s `context.WithTimeout`,
@@ -73,7 +73,7 @@ These are choices I made deliberately while building it:
 - **Request hardening.** Request bodies are capped with `http.MaxBytesReader`, and
   the JSON decoder uses `DisallowUnknownFields` to reject unexpected input.
 - **Alerts only on state transitions.** The webhook fires when a monitor's
-  up/down state flips, not on every failed check — a site that is down for an
+  up/down state flips, not on every failed check; a site that is down for an
   hour produces one alert, not one per check.
 - **Structured logging** via `log/slog` (JSON handler).
 
@@ -120,9 +120,9 @@ These are choices I made deliberately while building it:
 
 All success responses are JSON with the shape `{ "status", "message", "data" }`
 (`data` is omitted when empty). The full contract lives in
-[openapi.yaml](openapi.yaml) — browse it rendered at
+[openapi.yaml](openapi.yaml) (view rendered at
 [/docs](https://uptime-monitor-api-whxg.onrender.com/docs) on the live instance, or
-import it into Postman or Insomnia to try the endpoints.
+import it into Postman or Insomnia to test the endpoints).
 
 | Method | Path                                | Auth   | Description                                           |
 |--------|-------------------------------------|--------|-------------------------------------------------------|
@@ -219,9 +219,8 @@ Postgres init directory, so on a fresh database volume every numbered migration
 is applied in order automatically. The API is then available on
 `http://localhost:8080` (Postgres is published on `localhost:5454`).
 
-**Applying the schema manually** — needed if you run Postgres yourself outside
-Compose, or when a new migration lands on an already-initialised volume (the init
-directory only runs on first boot):
+**Applying the schema manually** (needed if you run Postgres yourself outside
+Compose, or when a new migration lands on an already-initialised volume):
 
 ```bash
 for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
@@ -231,8 +230,9 @@ for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 
 A live instance runs on Render with PostgreSQL.
 
-Live: [`/health`](https://uptime-monitor-api-whxg.onrender.com/health) ·
-[`/docs`](https://uptime-monitor-api-whxg.onrender.com/docs)
+Live: [`/docs`](https://uptime-monitor-api-whxg.onrender.com/docs)
+
+> Notes: the frontend-side isn't implemented yet, for now you can use either [`/docs`](https://uptime-monitor-api-whxg.onrender.com/docs) or [requests.http](requests.http) (via [vim-kulala](https://github.com/dont-be-evil-company/kulala.nvim), JetBrains HTTP Client, etc)
 
 ## Limitations and next steps
 
@@ -240,7 +240,7 @@ This is a learning project, and there are things I left out on purpose or would
 do next:
 
 - **Validation is light.** URLs with no scheme get `https://` prepended and
-  `check_interval` has a 10-second floor, but URLs aren't otherwise validated —
+  `check_interval` has a 10-second floor, but URLs aren't otherwise validated,
   including against private/internal addresses (SSRF), which a public deployment
   would need to reject.
 - **JWT is hand-rolled** for learning; a production version would use a maintained
@@ -250,4 +250,4 @@ do next:
   fresh-volume init or manual psql.
 - **Checks history is capped at the latest 50** with no pagination.
 - **Webhook delivery is fire-and-forget.** One POST per up/down transition with a
-  3s timeout — no retries or backoff if the webhook endpoint happens to be down.
+  3s timeout with no retries or backoff if the webhook endpoint happens to be down.

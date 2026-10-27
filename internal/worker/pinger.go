@@ -9,15 +9,27 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
 	"uptime-monitor/internal/models"
 )
 
 func (w *Worker) Ping(targetURL string) (int, time.Duration, error) {
 	start := time.Now()
-	client := http.Client{
+	client := &http.Client{
 		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			DisableKeepAlives: true,
+		},
 	}
-	resp, err := client.Get(targetURL)
+	var resp *http.Response
+	var err error
+	for attempt := 1; attempt <= 2; attempt++ {
+		resp, err = client.Get(targetURL)
+		if err == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 	if err != nil {
 		slog.Warn("failed to get url target", "error", err)
 		return 0, 0, err

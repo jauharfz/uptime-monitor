@@ -14,21 +14,28 @@ import (
 )
 
 func (w *Worker) Ping(targetURL string) (int, time.Duration, error) {
-	start := time.Now()
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			DisableKeepAlives: true,
 		},
 	}
+	var start time.Time
 	var resp *http.Response
 	var err error
 	for attempt := 1; attempt <= 2; attempt++ {
+		start = time.Now()
 		resp, err = client.Get(targetURL)
-		if err == nil {
+		// if cloudflare return status code > 500, the err still nil, then try again
+		if err == nil && resp.StatusCode < 500 {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		if attempt == 1 {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			time.Sleep(1 * time.Second)
+		}
 	}
 	if err != nil {
 		slog.Warn("failed to get url target", "error", err)
@@ -106,7 +113,7 @@ func (w *Worker) SendWebhook(monitor *models.Monitor, check *models.Check) {
 	}
 
 	status := "DOWN"
-	if params.StatusCode >= 200 && params.StatusCode < 300 {
+	if params.StatusCode >= 200 && params.StatusCode < 400 {
 		status = "UP"
 	}
 	header := fmt.Sprintf("%s <- this URL is %s right now, here's the detail:", params.Url, status)
